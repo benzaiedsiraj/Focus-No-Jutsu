@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Moon, Sun, Play, Pause, RotateCcw, AlertTriangle, Scroll, Flame, Target, ChevronDown, LogOut, Clock } from 'lucide-react';
 import { SharinganGraphic } from './components/SharinganGraphic';
 import { DynamicBackground } from './components/DynamicBackground';
@@ -129,7 +129,7 @@ const NinjaAcademyLoginContent = ({ setToken, isDark, setIsDark }) => {
         </button>
       </div>
 
-      <footer className="absolute bottom-6 left-1/2 -translate-x-1/2 text-[0.65rem] font-black tracking-[0.2em] uppercase text-slate-400/60 dark:text-zinc-500/50 hover:text-red-500/80 transition-colors duration-500 z-10 select-none text-center w-full">
+      <footer className="absolute bottom-6 left-1/2 -translate-x-1/2 text-[0.65rem] font-black tracking-[0.2em] uppercase text-slate-400/60 dark:text-zinc-500/50 hover:text-red-500/80 transition-colors duration-500 z-10 select-none text-center w-full shadow-sm drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
         Designed & Built by Siraj Benzaied 2026
       </footer>
 
@@ -145,6 +145,9 @@ function App() {
   const [mounted, setMounted] = useState(false);
   const [isDark, setIsDark] = useState(false);
   
+  const finishSound = useRef(null);
+  const ramenMusic = useRef(null);
+
   const [token, setToken] = useState(localStorage.getItem('token') || null);
   const activeUser = localStorage.getItem('username') || 'Ninja';
 
@@ -188,6 +191,11 @@ function App() {
     const savedTheme = localStorage.getItem('theme');
     const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     if (savedTheme === 'dark' || (!savedTheme && isSystemDark)) setIsDark(true);
+
+    finishSound.current = new Audio('/finish.mp3');
+    ramenMusic.current = new Audio('/ramen.mp3');
+    ramenMusic.current.loop = true;
+    ramenMusic.current.volume = 0.4; // Calm ambient volume
   }, []);
 
   useEffect(() => {
@@ -206,7 +214,21 @@ function App() {
     }
   }, [trainingTime, isRunning, isBreak]);
 
+  // Handle continuous BGM logic seamlessly avoiding overlapping audio streams
+  useEffect(() => {
+    if (!ramenMusic.current) return;
+    if (isBreak && isRunning) {
+       ramenMusic.current.play().catch(e => console.log('Audio overlap blocked by browser.', e));
+    } else {
+       ramenMusic.current.pause();
+    }
+  }, [isBreak, isRunning]);
+
   const handleLogout = () => {
+    if (ramenMusic.current) {
+        ramenMusic.current.pause();
+        ramenMusic.current.currentTime = 0;
+    }
     localStorage.removeItem('token');
     localStorage.removeItem('username');
     setToken(null);
@@ -263,7 +285,14 @@ function App() {
       interval = setInterval(() => { setTimeLeft(time => time - 1); }, 1000);
     } else if (timeLeft === 0 && isRunning) {
       setIsRunning(false);
+      
       if (!isBreak) {
+        // TRIGGER EXACT RING TONE NATURALLY WHEN STUDY FOCUS HITS ZERO
+        if (finishSound.current) {
+            finishSound.current.currentTime = 0;
+            finishSound.current.play().catch(e => console.log('Audio sync issue:', e));
+        }
+
         const saveSession = async () => {
           if (!token) return;
           try {
@@ -326,7 +355,12 @@ function App() {
                 <button onClick={() => { setShowResetModal(false); setIsRunning(true); }} className="flex-[1.2] py-3.5 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-zinc-200 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition-all font-semibold duration-300 hover:-translate-y-1">
                   Keep Focusing
                 </button>
-                <button onClick={() => { setShowResetModal(false); setIsRunning(false); setTimeLeft(isBreak ? RAMEN_TIME : trainingTime); }} className="flex-1 py-3.5 px-4 rounded-xl bg-red-600 hover:bg-red-500 text-white shadow-[0_5px_15px_rgba(220,38,38,0.3)] hover:shadow-[0_15px_30px_rgba(220,38,38,0.5)] hover:-translate-y-1 active:scale-[0.93] transition-all font-semibold tracking-wide duration-300">
+                <button onClick={() => { 
+                  setShowResetModal(false); 
+                  setIsRunning(false); 
+                  setTimeLeft(isBreak ? RAMEN_TIME : trainingTime); 
+                  if (ramenMusic.current) { ramenMusic.current.pause(); } // Force mute if dropping ramen strictly manually
+                }} className="flex-1 py-3.5 px-4 rounded-xl bg-red-600 hover:bg-red-500 text-white shadow-[0_5px_15px_rgba(220,38,38,0.3)] hover:shadow-[0_15px_30px_rgba(220,38,38,0.5)] hover:-translate-y-1 active:scale-[0.93] transition-all font-semibold tracking-wide duration-300">
                   Retreat
                 </button>
               </div>
