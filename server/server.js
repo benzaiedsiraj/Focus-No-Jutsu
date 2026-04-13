@@ -19,6 +19,9 @@ const auth = require('./middleware/auth');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Trust the Reverse Proxy (CRITICAL FOR RENDER/VERCEL deployment with Rate Limiting)
+app.set('trust proxy', 1);
+
 // Activate HTTP Header protections (XSS, Clickjacking, MIME Sniffing, etc.)
 app.use(helmet());
 
