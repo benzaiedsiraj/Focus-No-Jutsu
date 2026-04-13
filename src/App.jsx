@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Moon, Sun, Play, Pause, RotateCcw, AlertTriangle, Scroll, Flame, Target, ChevronDown, LogOut, Clock } from 'lucide-react';
+import { Moon, Sun, Play, Pause, RotateCcw, AlertTriangle, Scroll, Flame, Target, ChevronDown, LogOut, Clock, SkipForward, Music, Volume2, ListMusic } from 'lucide-react';
 import { SharinganGraphic } from './components/SharinganGraphic';
 import { DynamicBackground } from './components/DynamicBackground';
 
@@ -139,6 +139,91 @@ const NinjaAcademyLoginContent = ({ setToken, isDark, setIsDark }) => {
 
 
 // -------------------------------------------------------------------------------------------------
+// AMBIENT AUDIO WIDGET
+// -------------------------------------------------------------------------------------------------
+const AmbientAudioWidget = () => {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [volume, setVolume] = useState(0.4);
+  const [currentTrack, setCurrentTrack] = useState(0);
+  const audioRef = useRef(null);
+
+  const tracks = [
+    { title: "Hidden Rain Village (Rain)", url: "/rain.mp3" },
+    { title: "Konoha Forest (Wind)", url: "/wind.mp3" },
+    { title: "Lo-Fi Hokage Beats", url: "/lofi.mp3" }
+  ];
+
+  useEffect(() => {
+    audioRef.current = new Audio(tracks[currentTrack].url);
+    audioRef.current.loop = true;
+    audioRef.current.volume = volume;
+    if (isPlaying) {
+      audioRef.current.play().catch(e => console.log('Audio overlap blocked by browser.', e));
+    }
+    return () => {
+      audioRef.current.pause();
+      audioRef.current.src = "";
+    };
+  }, [currentTrack]);
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume;
+    }
+  }, [volume]);
+
+  useEffect(() => {
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.play().catch(e => console.log('Audio overlap blocked by browser.', e));
+      } else {
+        audioRef.current.pause();
+      }
+    }
+  }, [isPlaying]);
+
+  return (
+    <section className="bg-white/60 dark:bg-slate-900/40 backdrop-blur-3xl border border-white/60 dark:border-slate-700/50 p-6 md:p-8 rounded-[2rem] shadow-lg dark:shadow-[0_10px_40px_rgb(0,0,0,0.3)] flex flex-col gap-5 transition-all duration-700 transform hover:-translate-y-1 hover:shadow-xl w-full">
+      <div className="flex items-center gap-3 text-slate-800 dark:text-white pb-2 border-b border-slate-200/50 dark:border-slate-800/50">
+        <Music className="text-red-500 hover:rotate-12 transition-transform duration-700" size={20} />
+        <h3 className="font-bold text-lg tracking-tight">Ambient Audio</h3>
+      </div>
+      
+      <div className="flex flex-col gap-3 mt-1 group">
+        <label className="text-[0.7rem] font-black text-slate-500 uppercase tracking-wider transition-colors group-focus-within:text-red-500">Track Select</label>
+        <div className="relative hover:scale-[1.03] transition-all duration-300 rounded-xl">
+          <select 
+            value={currentTrack}
+            onChange={(e) => setCurrentTrack(Number(e.target.value))}
+            className="w-full appearance-none bg-slate-100/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-800 dark:text-white font-bold text-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500/30 transition-all pr-10 hover:bg-slate-200 dark:hover:bg-slate-700"
+          >
+            {tracks.map((t, idx) => <option key={idx} value={idx} className="font-bold">{t.title}</option>)}
+          </select>
+          <ListMusic className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none group-focus-within:rotate-6 transition-transform duration-300" size={16} strokeWidth={3} />
+        </div>
+      </div>
+
+      <div className="flex items-center gap-4 mt-2">
+        <button 
+          onClick={() => setIsPlaying(!isPlaying)}
+          className={`flex-none w-12 h-12 flex items-center justify-center rounded-xl shadow-md transition-all duration-300 active:scale-95 hover:-translate-y-1 ${isPlaying ? "bg-red-600 text-white shadow-red-500/40 hover:bg-red-500" : "bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700"}`}
+        >
+          {isPlaying ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" />}
+        </button>
+        
+        <div className="flex-1 flex items-center gap-3 bg-slate-100/50 dark:bg-slate-800/50 p-2.5 px-4 rounded-xl border border-slate-200 dark:border-slate-700">
+          <Volume2 className="text-slate-400" size={16} />
+          <input 
+            type="range" min="0" max="1" step="0.01" value={volume} onChange={(e) => setVolume(parseFloat(e.target.value))}
+            className="w-full accent-red-500 h-1.5 bg-slate-300 dark:bg-slate-600 rounded-xl appearance-none cursor-pointer"
+          />
+        </div>
+      </div>
+    </section>
+  );
+};
+
+// -------------------------------------------------------------------------------------------------
 // MAIN DASHBOARD APP PORTAL
 // -------------------------------------------------------------------------------------------------
 function App() {
@@ -147,6 +232,7 @@ function App() {
   
   const finishSound = useRef(null);
   const ramenMusic = useRef(null);
+  const snapSound = useRef(null);
 
   const [token, setToken] = useState(localStorage.getItem('token') || null);
   const activeUser = localStorage.getItem('username') || 'Ninja';
@@ -194,6 +280,7 @@ function App() {
 
     finishSound.current = new Audio('/finish.mp3');
     ramenMusic.current = new Audio('/ramen.mp3');
+    snapSound.current = new Audio('/snap.mp3');
     ramenMusic.current.loop = true;
     ramenMusic.current.volume = 0.4; // Calm ambient volume
   }, []);
@@ -415,14 +502,34 @@ function App() {
                 {formatTime(timeLeft)}
               </div>
 
-              <div className="flex gap-4 w-full max-w-[280px] justify-center mt-2 group-hover:-translate-y-2 transition-transform duration-700">
+              <div className="flex gap-4 w-full max-w-[340px] justify-center mt-2 group-hover:-translate-y-2 transition-transform duration-700">
                 <button 
-                  onClick={() => setIsRunning(!isRunning)}
+                  onClick={() => {
+                    if (!isRunning && !isBreak && snapSound.current) {
+                      snapSound.current.currentTime = 0;
+                      snapSound.current.play().catch(e => console.log('Audio sync issue:', e));
+                    }
+                    setIsRunning(!isRunning);
+                  }}
                   className={`flex-1 flex items-center justify-center gap-2 py-4.5 px-6 rounded-2xl shadow-xl hover:scale-105 hover:-translate-y-1 active:scale-[0.96] transition-all duration-300 ease-out font-bold tracking-wide text-[1.05rem] text-white ${isBreak ? "bg-orange-500 hover:bg-orange-400 shadow-[0_10px_30px_rgba(249,115,22,0.3)] hover:shadow-[0_15px_40px_rgba(249,115,22,0.5)]" : "bg-red-600 hover:bg-red-500 shadow-[0_10px_30px_rgba(220,38,38,0.3)] hover:shadow-[0_15px_40px_rgba(220,38,38,0.5)]"}`}
                 >
                   {isRunning ? <><Pause className="animate-pulse" size={20} fill="currentColor" /> Pause</> : <><Play size={20} fill="currentColor" className="hover:animate-pulse" /> {isBreak ? 'Eat Ramen' : 'Begin'}</>}
                 </button>
                 
+                {isBreak && (
+                  <button 
+                    onClick={() => {
+                      setIsBreak(false); 
+                      setIsRunning(false); 
+                      setTimeLeft(trainingTime);
+                    }}
+                    className="flex-none p-4.5 rounded-2xl bg-orange-100/50 dark:bg-orange-900/30 backdrop-blur-md text-orange-600 dark:text-orange-400 hover:bg-orange-200 dark:hover:bg-orange-800 hover:text-orange-700 dark:hover:text-orange-300 shadow-sm hover:shadow-[0_10px_20px_rgba(249,115,22,0.15)] hover:scale-110 hover:-translate-y-1 active:scale-90 transition-all duration-300 border border-orange-200/50 dark:border-orange-800/50"
+                    title="Skip Ramen Break"
+                  >
+                    <SkipForward size={22} strokeWidth={2.5} />
+                  </button>
+                )}
+
                 <button 
                   onClick={() => {
                     if (isRunning) { setIsRunning(false); setShowResetModal(true); }
@@ -497,6 +604,8 @@ function App() {
                 </div>
               </div>
             </section>
+            
+            <AmbientAudioWidget />
 
           </div>
 
