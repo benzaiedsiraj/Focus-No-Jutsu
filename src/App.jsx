@@ -130,7 +130,7 @@ const NinjaAcademyLoginContent = ({ setToken, isDark, setIsDark }) => {
       </div>
 
       <footer className="absolute bottom-6 left-1/2 -translate-x-1/2 text-[0.65rem] font-black tracking-[0.2em] uppercase text-slate-400/60 dark:text-zinc-500/50 hover:text-red-500/80 transition-colors duration-500 z-10 select-none text-center w-full shadow-sm drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
-        Designed & Built by Siraj Benzaied 2026
+        Designed & Built by <a href="https://benzaiedsiraj.github.io/portfolio/" target="_blank" rel="noopener noreferrer" className="hover:underline transition-all">Siraj Benzaied</a> 2026
       </footer>
 
     </div>
@@ -547,7 +547,7 @@ function App() {
       </main>
 
       <footer className="absolute bottom-6 left-1/2 -translate-x-1/2 text-[0.65rem] font-black tracking-[0.2em] uppercase text-slate-400/80 dark:text-zinc-500/80 hover:text-red-500 transition-colors duration-500 z-10 select-none text-center w-full shadow-sm drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
-        Designed & Built by Siraj Benzaied 2026
+        Designed & Built by <a href="https://benzaiedsiraj.github.io/portfolio/" target="_blank" rel="noopener noreferrer" className="hover:underline transition-all">Siraj Benzaied</a> 2026
       </footer>
 
     </div>
