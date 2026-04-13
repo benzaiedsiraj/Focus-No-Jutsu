@@ -127,20 +127,106 @@ app.post('/api/login', async (req, res) => {
 // ----------------------------------------------------------------------------------
 app.post('/api/sessions', auth, async (req, res) => {
   try {
-    const { plantType, missionName, missionRank } = req.body;
+    const { plantType, missionName, missionRank, duration } = req.body;
     
     if (mongoose.connection.readyState !== 1) {
        console.log(`⚠️ Atlas Offline: Simulated scroll save for ${req.user.username}`);
-       const mockDoc = { _id: Date.now().toString(), plantType, missionName, missionRank, userId: req.user.id, createdAt: new Date() };
+       const mockDoc = { _id: Date.now().toString(), plantType, missionName, missionRank, duration: duration || 0, userId: req.user.id, createdAt: new Date() };
        mockOfflineSessions.push(mockDoc);
        return res.status(201).json({ success: true, data: mockDoc });
     }
     
-    const newSession = new Session({ plantType, missionName, missionRank, userId: req.user.id });
+    const newSession = new Session({ plantType, missionName, missionRank, duration: duration || 0, userId: req.user.id });
     const savedSession = await newSession.save();
     res.status(201).json({ success: true, data: savedSession });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Server Error saving mission scroll' });
+  }
+});
+
+app.get('/api/sessions/stats', auth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    let allTimeHours = 0;
+    let weeklyData = [];
+    
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const now = new Date();
+    
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(now.getDate() - i);
+      weeklyData.push({
+        day: dayNames[d.getDay()],
+        minutes: 0,
+        dateString: d.toISOString().split('T')[0]
+      });
+    }
+
+    if (mongoose.connection.readyState !== 1) {
+      const userSessions = mockOfflineSessions.filter(s => String(s.userId) === String(userId));
+      const defaultLegacySeconds = 1500;
+      let totalSeconds = 0;
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+      userSessions.forEach(session => {
+        const d = session.duration !== undefined ? session.duration : defaultLegacySeconds;
+        totalSeconds += d;
+        const sessionDate = new Date(session.createdAt);
+        if (sessionDate >= sevenDaysAgo) {
+          const sDateString = sessionDate.toISOString().split('T')[0];
+          const weekDayMatch = weeklyData.find(w => w.dateString === sDateString);
+          if (weekDayMatch) {
+            weekDayMatch.minutes += (d / 60);
+          }
+        }
+      });
+      weeklyData.forEach(w => w.minutes = Math.round(w.minutes));
+      allTimeHours = totalSeconds / 3600;
+      return res.status(200).json({ success: true, allTimeHours, weeklyData });
+    }
+
+    const defaultLegacyDuration = 1500;
+    const statsResult = await Session.aggregate([
+      { $match: { userId: new mongoose.Types.ObjectId(userId) } },
+      {
+        $project: {
+          createdAt: 1,
+          durationSeconds: { $ifNull: ["$duration", defaultLegacyDuration] }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalSeconds: { $sum: "$durationSeconds" },
+          sessions: { $push: "$$ROOT" }
+        }
+      }
+    ]);
+    
+    if (statsResult.length > 0) {
+      const result = statsResult[0];
+      allTimeHours = result.totalSeconds / 3600;
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      
+      result.sessions.forEach(session => {
+        if (session.createdAt >= sevenDaysAgo) {
+           const sDateString = session.createdAt.toISOString().split('T')[0];
+           const weekDayMatch = weeklyData.find(w => w.dateString === sDateString);
+           if (weekDayMatch) {
+             weekDayMatch.minutes += (session.durationSeconds / 60);
+           }
+        }
+      });
+      weeklyData.forEach(w => w.minutes = Math.round(w.minutes));
+    }
+
+    res.status(200).json({ success: true, allTimeHours, weeklyData });
+  } catch (error) {
+    console.error('Stats Error:', error);
+    res.status(500).json({ success: false, message: 'Server Error fetching session stats' });
   }
 });
 

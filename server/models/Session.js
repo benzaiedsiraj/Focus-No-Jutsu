@@ -14,6 +14,10 @@ const sessionSchema = new mongoose.Schema({
     enum: ['D-Rank', 'C-Rank', 'B-Rank', 'A-Rank', 'S-Rank', 'Unranked'],
     default: 'Unranked',
   },
+  duration: {
+    type: Number,
+    default: 0,
+  },
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',

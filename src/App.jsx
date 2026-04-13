@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Moon, Sun, Play, Pause, RotateCcw, AlertTriangle, Scroll, Flame, Target, ChevronDown, LogOut, Clock, SkipForward, Music, Volume2, ListMusic } from 'lucide-react';
+import { Moon, Sun, Play, Pause, RotateCcw, AlertTriangle, Scroll, Flame, Target, ChevronDown, LogOut, Clock, SkipForward, Music, Volume2, ListMusic, GraduationCap, Swords, Shield, Crown, Star } from 'lucide-react';
 import { SharinganGraphic } from './components/SharinganGraphic';
 import { DynamicBackground } from './components/DynamicBackground';
+import { ShinobiAnalytics } from './components/ShinobiAnalytics';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -239,6 +240,7 @@ function App() {
 
   const [showResetModal, setShowResetModal] = useState(false);
   const [sessions, setSessions] = useState([]);
+  const [stats, setStats] = useState({ allTimeHours: 0, weeklyData: [] });
 
   const [taskName, setTaskName] = useState('');
   const [missionRank, setMissionRank] = useState('D-Rank');
@@ -320,6 +322,7 @@ function App() {
     localStorage.removeItem('username');
     setToken(null);
     setSessions([]);
+    setStats({ allTimeHours: 0, weeklyData: [] });
     setStreak(0);
   };
 
@@ -361,6 +364,14 @@ function App() {
          setSessions(data.data);
          setStreak(calculateStreak(data.data));
       }
+      
+      const statsRes = await fetch(`${API_BASE_URL}/api/sessions/stats`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const statsData = await statsRes.json();
+      if (statsData.success) {
+         setStats({ allTimeHours: statsData.allTimeHours, weeklyData: statsData.weeklyData });
+      }
     } catch (err) { }
   };
 
@@ -386,7 +397,7 @@ function App() {
              await fetch(`${API_BASE_URL}/api/sessions`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-              body: JSON.stringify({ plantType: 'Mangekyou Awakening', missionName: taskName.trim() === '' ? 'Uncategorized Training' : taskName, missionRank: missionRank })
+              body: JSON.stringify({ plantType: 'Mangekyou Awakening', missionName: taskName.trim() === '' ? 'Uncategorized Training' : taskName, missionRank: missionRank, duration: trainingTime })
             });
             fetchSessions();
           } catch (err) { }
@@ -416,6 +427,16 @@ function App() {
       default: return 'text-slate-500 border-slate-300 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/50 hover:shadow-lg';
     }
   };
+
+  const getRankInfo = (hours) => {
+    if (hours < 5) return { title: 'Academy Student', icon: GraduationCap, color: 'text-emerald-500' };
+    if (hours < 20) return { title: 'Genin', icon: Swords, color: 'text-blue-500' };
+    if (hours < 50) return { title: 'Chunin', icon: Shield, color: 'text-purple-500' };
+    if (hours < 100) return { title: 'Jonin', icon: Crown, color: 'text-orange-500' };
+    return { title: 'Kage', icon: Star, color: 'text-red-600' };
+  };
+  const headerRank = getRankInfo(stats?.allTimeHours || 0);
+  const HeaderRankIcon = headerRank.icon;
 
   if (!token) return <NinjaAcademyLoginContent setToken={setToken} isDark={isDark} setIsDark={setIsDark} />;
 
@@ -465,9 +486,13 @@ function App() {
         </h1>
         
         <div className={`flex items-center gap-3 transition-all duration-700 delay-100 ${mounted ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4'}`}>
-          <span className="hidden sm:inline-block font-bold text-slate-500 px-2 tracking-wide uppercase text-sm border-r border-slate-300 dark:border-slate-700 mr-1 opacity-70 hover:opacity-100 transition-opacity">
-            Ninja: <span className="text-red-500">{activeUser}</span>
-          </span>
+          <div className="hidden sm:flex items-center gap-3 border-r border-slate-300 dark:border-slate-700 pr-4 mr-1 opacity-90 transition-opacity">
+            <HeaderRankIcon className={headerRank.color} size={22} strokeWidth={2.5} />
+            <div className="flex flex-col items-start leading-[1.1]">
+              <span className={`text-[0.6rem] font-black uppercase tracking-[0.15em] ${headerRank.color}`}>{headerRank.title}</span>
+              <span className="font-bold text-slate-600 dark:text-slate-300 tracking-wide text-[0.9rem]">{activeUser}</span>
+            </div>
+          </div>
           <button onClick={handleLogout} className="p-3 rounded-2xl bg-white/40 dark:bg-slate-800/40 backdrop-blur-md text-slate-500 dark:text-slate-400 hover:text-red-500 transition-all duration-300 border border-white/40 dark:border-slate-700/50 hover:bg-white hover:shadow-[0_5px_20px_rgba(220,38,38,0.15)] hover:-translate-y-1 active:scale-95">
             <LogOut size={20} strokeWidth={2.5} />
           </button>
@@ -545,6 +570,8 @@ function App() {
 
           <div className="lg:col-span-4 flex flex-col gap-5 md:gap-6 w-full">
             
+            <ShinobiAnalytics stats={stats} isDark={isDark} />
+
             <section className={`bg-white/60 dark:bg-slate-900/40 backdrop-blur-3xl border border-white/60 dark:border-slate-700/50 flex items-center justify-between p-6 md:p-8 rounded-[2rem] shadow-lg dark:shadow-[0_10px_40px_rgb(0,0,0,0.3)] hover:-translate-y-2 hover:shadow-xl transition-all duration-700 delay-300 transform group cursor-default ${mounted ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}`}>
               <div className="flex flex-col gap-1">
                 <span className="text-sm font-bold tracking-widest text-slate-400 uppercase transition-colors group-hover:text-slate-500">Ninja Way</span>
