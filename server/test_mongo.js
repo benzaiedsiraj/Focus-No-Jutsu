@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
+require('dotenv').config();
 
-const uri = "mongodb+srv://walaeuro10_db_user:PqB9qAty7q82UQvn@cluster0.cuujaoi.mongodb.net/focusflow?retryWrites=true&w=majority";
+const uri = process.env.MONGO_URI;
 
 mongoose.connect(uri)
   .then(() => {
