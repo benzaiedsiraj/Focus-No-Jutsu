@@ -3,6 +3,7 @@ import { Moon, Sun, Play, Pause, RotateCcw, AlertTriangle, Scroll, Flame, Target
 import { SharinganGraphic } from './components/SharinganGraphic';
 import { DynamicBackground } from './components/DynamicBackground';
 import { ShinobiAnalytics } from './components/ShinobiAnalytics';
+import { Leaderboard } from './components/Leaderboard';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -241,6 +242,7 @@ function App() {
   const [showResetModal, setShowResetModal] = useState(false);
   const [sessions, setSessions] = useState([]);
   const [stats, setStats] = useState({ allTimeHours: 0, weeklyData: [] });
+  const [leaderboardData, setLeaderboardData] = useState([]);
 
   const [taskName, setTaskName] = useState('');
   const [missionRank, setMissionRank] = useState('D-Rank');
@@ -371,6 +373,12 @@ function App() {
       const statsData = await statsRes.json();
       if (statsData.success) {
          setStats({ allTimeHours: statsData.allTimeHours, weeklyData: statsData.weeklyData });
+      }
+
+      const lbRes = await fetch(`${API_BASE_URL}/api/leaderboard`);
+      const lbData = await lbRes.json();
+      if (lbData.success) {
+         setLeaderboardData(lbData.data);
       }
     } catch (err) { }
   };
@@ -636,7 +644,7 @@ function App() {
 
           </div>
 
-          <section className={`lg:col-span-12 bg-white/60 dark:bg-slate-900/40 backdrop-blur-3xl border border-white/60 dark:border-slate-700/50 p-6 md:p-8 rounded-[2.5rem] shadow-lg dark:shadow-[0_10px_40px_rgb(0,0,0,0.3)] flex flex-col gap-6 transition-all duration-700 delay-[700ms] transform hover:-translate-y-1 hover:shadow-xl ${mounted ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}`}>
+          <section className={`lg:col-span-8 bg-white/60 dark:bg-slate-900/40 backdrop-blur-3xl border border-white/60 dark:border-slate-700/50 p-6 md:p-8 rounded-[2.5rem] shadow-lg dark:shadow-[0_10px_40px_rgb(0,0,0,0.3)] flex flex-col gap-6 transition-all duration-700 delay-[700ms] transform hover:-translate-y-1 hover:shadow-xl ${mounted ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}`}>
             <div className="flex items-center justify-between group">
               <div className="flex items-center gap-3">
                 <Scroll className="text-slate-800 dark:text-slate-200 group-hover:-rotate-12 group-hover:scale-110 transition-transform duration-500" size={24} />
@@ -678,6 +686,10 @@ function App() {
 
             </div>
           </section>
+
+          <div className={`lg:col-span-4 w-full h-[540px] transition-all duration-700 delay-[850ms] transform ${mounted ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}`}>
+             <Leaderboard data={leaderboardData} activeUser={activeUser} isDark={isDark} />
+          </div>
 
         </div>
       </main>

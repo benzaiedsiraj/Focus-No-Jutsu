@@ -244,6 +244,69 @@ app.get('/api/sessions', auth, async (req, res) => {
   }
 });
 
+// ----------------------------------------------------------------------------------
+// GLOBAL LEADERBOARD ROUTE
+// ----------------------------------------------------------------------------------
+app.get('/api/leaderboard', async (req, res) => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      const userTotals = {};
+      mockOfflineSessions.forEach(session => {
+        if (!userTotals[session.userId]) {
+           userTotals[session.userId] = { totalSessions: 0, totalSeconds: 0 };
+        }
+        userTotals[session.userId].totalSessions += 1;
+        userTotals[session.userId].totalSeconds += session.duration || 1500;
+      });
+      
+      const offlineLeaderboard = Object.keys(userTotals).map(userId => {
+         const user = mockOfflineUsers.find(u => String(u.id) === String(userId));
+         return {
+           username: user ? user.username : 'Unknown Ninja',
+           totalSessions: userTotals[userId].totalSessions,
+           totalHours: userTotals[userId].totalSeconds / 3600
+         };
+      }).sort((a, b) => b.totalSessions - a.totalSessions).slice(0, 10);
+      
+      return res.status(200).json({ success: true, data: offlineLeaderboard });
+    }
+
+    const leaderboard = await Session.aggregate([
+      {
+        $group: {
+          _id: "$userId",
+          totalSessions: { $sum: 1 },
+          totalDuration: { $sum: { $ifNull: ["$duration", 1500] } }
+        }
+      },
+      { $sort: { totalSessions: -1 } },
+      { $limit: 10 },
+      {
+        $lookup: {
+          from: "users",
+          localField: "_id",
+          foreignField: "_id",
+          as: "user"
+        }
+      },
+      { $unwind: "$user" },
+      {
+        $project: {
+          _id: 0,
+          username: "$user.username",
+          totalSessions: 1,
+          totalHours: { $divide: ["$totalDuration", 3600] }
+        }
+      }
+    ]);
+
+    res.status(200).json({ success: true, data: leaderboard });
+  } catch (error) {
+    console.error('Leaderboard Error:', error);
+    res.status(500).json({ success: false, message: 'Server Error retrieving leaderboard' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`\n⏱️  Focus-Flow Secured Backend running on port ${PORT}\n`);
 });
