@@ -268,28 +268,25 @@ app.post('/api/advisor/ask', advisorLimiter, auth, async (req, res) => {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
-
-    const result = await model.generateContent({
-      contents: [
-        {
-          role: 'user',
-          parts: [{ text: `${KAKASHI_SYSTEM_PROMPT}\n\nUser's overwhelming task: "${task.trim()}"` }]
-        }
-      ],
+    const model = genAI.getGenerativeModel({ 
+      model: 'gemini-2.0-flash',
       generationConfig: {
         maxOutputTokens: 400,
         temperature: 0.8,
       },
     });
 
-    const response = result.response;
-    const text = response.text();
+    const prompt = `${KAKASHI_SYSTEM_PROMPT}\n\nUser's overwhelming task: "${task.trim()}"`;
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
 
     res.status(200).json({ success: true, advice: text });
   } catch (error) {
-    console.error('Kakashi Advisor Error:', error.message);
-    res.status(500).json({ success: false, message: 'Kakashi-sensei got caught in a genjutsu. Try again.' });
+    console.error('Kakashi Advisor Error:', error.message, error.stack);
+    const debugMsg = process.env.NODE_ENV === 'production' 
+      ? 'Kakashi-sensei got caught in a genjutsu. Try again.'
+      : `Kakashi Error: ${error.message}`;
+    res.status(500).json({ success: false, message: debugMsg });
   }
 });
 
