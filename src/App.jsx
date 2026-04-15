@@ -1,9 +1,15 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Moon, Sun, Play, Pause, RotateCcw, AlertTriangle, Scroll, Flame, Target, ChevronDown, LogOut, Clock, SkipForward, Music, Volume2, ListMusic, GraduationCap, Swords, Shield, Crown, Star } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Moon, Sun, Play, Pause, RotateCcw, AlertTriangle, Scroll, Flame, Target, ChevronDown, LogOut, Clock, SkipForward, Music, Volume2, ListMusic, GraduationCap, Swords, Shield, Crown, Star, PictureInPicture2, Monitor } from 'lucide-react';
 import { SharinganGraphic } from './components/SharinganGraphic';
 import { DynamicBackground } from './components/DynamicBackground';
 import { ShinobiAnalytics } from './components/ShinobiAnalytics';
 import { Leaderboard } from './components/Leaderboard';
+import { TimerProvider, useTimer } from './context/TimerContext';
+import { usePictureInPicture } from './hooks/usePictureInPicture';
+import { useDesktopView } from './hooks/useDesktopView';
+import MiniPlayer from './components/MiniPlayer';
+import InstallPrompt from './components/InstallPrompt';
+import Draggable from 'react-draggable';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -258,23 +264,7 @@ function App() {
     { label: '60 Min (Kage)', value: 3600 },
   ];
 
-  const [trainingTime, setTrainingTime] = useState(60); 
-
-  const [timeLeft, setTimeLeft] = useState(60);
-  const [isRunning, setIsRunning] = useState(false);
-  const [isBreak, setIsBreak] = useState(false);
-
-  const currentTotal = isBreak ? RAMEN_TIME : trainingTime;
-  const percentage = timeLeft / currentTotal;
-  let graphicStage = 0;
-  
-  if (isBreak) graphicStage = 3; 
-  else {
-    if (percentage <= 0.25) graphicStage = 3;      
-    else if (percentage <= 0.50) graphicStage = 2; 
-    else if (percentage <= 0.75) graphicStage = 1; 
-    else graphicStage = 0;                         
-  }
+  const [trainingTime, setTrainingTime] = useState(60);
 
   useEffect(() => {
     setMounted(true);
@@ -299,21 +289,9 @@ function App() {
     }
   }, [isDark]);
 
-  useEffect(() => {
-    if (!isRunning && !isBreak) {
-      setTimeLeft(trainingTime);
-    }
-  }, [trainingTime, isRunning, isBreak]);
+  // trainingTime sync is now handled inside TimerContext
 
-  // Handle continuous BGM logic seamlessly avoiding overlapping audio streams
-  useEffect(() => {
-    if (!ramenMusic.current) return;
-    if (isBreak && isRunning) {
-       ramenMusic.current.play().catch(e => console.log('Audio overlap blocked by browser.', e));
-    } else {
-       ramenMusic.current.pause();
-    }
-  }, [isBreak, isRunning]);
+  // BGM logic is handled in AppDashboard where we have access to timer context
 
   const handleLogout = () => {
     if (ramenMusic.current) {
@@ -385,45 +363,7 @@ function App() {
 
   useEffect(() => { if (token) fetchSessions(); }, [token]);
 
-  useEffect(() => {
-    let interval = null;
-    if (isRunning && timeLeft > 0) {
-      interval = setInterval(() => { setTimeLeft(time => time - 1); }, 1000);
-    } else if (timeLeft === 0 && isRunning) {
-      setIsRunning(false);
-      
-      if (!isBreak) {
-        // TRIGGER EXACT RING TONE NATURALLY WHEN STUDY FOCUS HITS ZERO
-        if (finishSound.current) {
-            finishSound.current.currentTime = 0;
-            finishSound.current.play().catch(e => console.log('Audio sync issue:', e));
-        }
-
-        const saveSession = async () => {
-          if (!token) return;
-          try {
-             await fetch(`${API_BASE_URL}/api/sessions`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-              body: JSON.stringify({ plantType: 'Mangekyou Awakening', missionName: taskName.trim() === '' ? 'Uncategorized Training' : taskName, missionRank: missionRank, duration: trainingTime })
-            });
-            fetchSessions();
-          } catch (err) { }
-        };
-        saveSession();
-        setIsBreak(true); setTimeLeft(RAMEN_TIME);
-      } else {
-        setIsBreak(false); setTimeLeft(trainingTime);
-      }
-    }
-    return () => clearInterval(interval);
-  }, [isRunning, timeLeft, isBreak, token, taskName, missionRank, trainingTime]);
-
-  const formatTime = (seconds) => {
-    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
-    const s = (seconds % 60).toString().padStart(2, '0');
-    return `${m}:${s}`;
-  };
+  // Timer interval logic and formatTime are now in TimerContext
 
   const getRankColors = (rank) => {
     switch(rank) {
@@ -447,6 +387,100 @@ function App() {
   const HeaderRankIcon = headerRank.icon;
 
   if (!token) return <NinjaAcademyLoginContent setToken={setToken} isDark={isDark} setIsDark={setIsDark} />;
+
+  // Timer completion callbacks (sound effects)
+  const handleTimerComplete = () => {
+    if (finishSound.current) {
+      finishSound.current.currentTime = 0;
+      finishSound.current.play().catch(e => console.log('Audio sync issue:', e));
+    }
+  };
+
+  const handleBreakComplete = () => {
+    // Break ended naturally — no special sound needed
+  };
+
+  return (
+    <TimerProvider 
+      token={token} 
+      trainingTime={trainingTime} 
+      taskName={taskName} 
+      missionRank={missionRank} 
+      onTimerComplete={handleTimerComplete}
+      onBreakComplete={handleBreakComplete}
+      onFetchSessions={fetchSessions}
+    >
+      <AppDashboard
+        mounted={mounted}
+        isDark={isDark}
+        setIsDark={setIsDark}
+        token={token}
+        activeUser={activeUser}
+        showResetModal={showResetModal}
+        setShowResetModal={setShowResetModal}
+        sessions={sessions}
+        stats={stats}
+        leaderboardData={leaderboardData}
+        taskName={taskName}
+        setTaskName={setTaskName}
+        missionRank={missionRank}
+        setMissionRank={setMissionRank}
+        streak={streak}
+        ranks={ranks}
+        timeOptions={timeOptions}
+        trainingTime={trainingTime}
+        setTrainingTime={setTrainingTime}
+        RAMEN_TIME={RAMEN_TIME}
+        handleLogout={handleLogout}
+        finishSound={finishSound}
+        ramenMusic={ramenMusic}
+        snapSound={snapSound}
+        headerRank={headerRank}
+        HeaderRankIcon={HeaderRankIcon}
+        getRankColors={getRankColors}
+        fetchSessions={fetchSessions}
+      />
+    </TimerProvider>
+  );
+}
+
+// -------------------------------------------------------------------------------------------------
+// INNER DASHBOARD COMPONENT (consumes TimerContext)
+// -------------------------------------------------------------------------------------------------
+const AppDashboard = ({
+  mounted, isDark, setIsDark, token, activeUser,
+  showResetModal, setShowResetModal,
+  sessions, stats, leaderboardData,
+  taskName, setTaskName, missionRank, setMissionRank,
+  streak, ranks, timeOptions, trainingTime, setTrainingTime,
+  RAMEN_TIME, handleLogout,
+  finishSound, ramenMusic, snapSound,
+  headerRank, HeaderRankIcon, getRankColors, fetchSessions,
+}) => {
+  const { timeLeft, isRunning, isBreak, formatTime, toggleRunning, resetTimer, skipBreak, currentTotal, percentage, setIsRunning } = useTimer();
+  const timerContextValue = useTimer();
+  const { isPipSupported, isPipOpen, openPip, closePip } = usePictureInPicture(timerContextValue);
+  const { isDesktopView, toggleDesktopView, isMobileDevice } = useDesktopView();
+  const draggableRef = useRef(null);
+
+  let graphicStage = 0;
+  if (isBreak) graphicStage = 3; 
+  else {
+    if (percentage <= 0.25) graphicStage = 3;      
+    else if (percentage <= 0.50) graphicStage = 2; 
+    else if (percentage <= 0.75) graphicStage = 1; 
+    else graphicStage = 0;                         
+  }
+
+  // Handle continuous BGM logic seamlessly avoiding overlapping audio streams
+  useEffect(() => {
+    if (!ramenMusic.current) return;
+    if (isBreak && isRunning) {
+       ramenMusic.current.play().catch(e => console.log('Audio overlap blocked by browser.', e));
+    } else {
+       ramenMusic.current.pause();
+    }
+  }, [isBreak, isRunning]);
 
   return (
     <div className="min-h-screen flex flex-col font-sans transition-colors duration-500 ease-in-out selection:bg-red-500/20 relative overflow-hidden bg-transparent">
@@ -473,8 +507,7 @@ function App() {
                 </button>
                 <button onClick={() => { 
                   setShowResetModal(false); 
-                  setIsRunning(false); 
-                  setTimeLeft(isBreak ? RAMEN_TIME : trainingTime); 
+                  resetTimer();
                   if (ramenMusic.current) { ramenMusic.current.pause(); } // Force mute if dropping ramen strictly manually
                 }} className="flex-1 py-3.5 px-4 rounded-xl bg-red-600 hover:bg-red-500 text-white shadow-[0_5px_15px_rgba(220,38,38,0.3)] hover:shadow-[0_15px_30px_rgba(220,38,38,0.5)] hover:-translate-y-1 active:scale-[0.93] transition-all font-semibold tracking-wide duration-300">
                   Retreat
@@ -507,6 +540,19 @@ function App() {
           <button onClick={() => setIsDark(!isDark)} className="p-3 rounded-2xl bg-white/40 dark:bg-slate-800/40 backdrop-blur-md text-slate-500 dark:text-slate-400 hover:text-red-500 transition-all duration-300 border border-white/40 dark:border-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 hover:shadow-[0_5px_20px_rgba(255,255,255,0.1)] hover:-translate-y-1 hover:rotate-12 active:scale-95">
             {isDark ? <Sun size={20} strokeWidth={2.5} /> : <Moon size={20} strokeWidth={2.5} />}
           </button>
+          {isMobileDevice && (
+            <button 
+              onClick={toggleDesktopView} 
+              title={isDesktopView ? 'Switch to Mobile View' : 'Request Desktop Site'}
+              className={`p-3 rounded-2xl backdrop-blur-md transition-all duration-300 border hover:-translate-y-1 active:scale-95 ${
+                isDesktopView 
+                  ? 'bg-red-600/20 dark:bg-red-600/20 text-red-500 border-red-500/40 shadow-[0_0_15px_rgba(220,38,38,0.25)]' 
+                  : 'bg-white/40 dark:bg-slate-800/40 text-slate-500 dark:text-slate-400 hover:text-red-500 border-white/40 dark:border-slate-700/50 hover:shadow-[0_5px_20px_rgba(220,38,38,0.15)]'
+              }`}
+            >
+              <Monitor size={20} strokeWidth={2.5} />
+            </button>
+          )}
         </div>
       </header>
 
@@ -542,7 +588,7 @@ function App() {
                       snapSound.current.currentTime = 0;
                       snapSound.current.play().catch(e => console.log('Audio sync issue:', e));
                     }
-                    setIsRunning(!isRunning);
+                    toggleRunning();
                   }}
                   className={`flex-1 flex items-center justify-center gap-2 py-4.5 px-6 rounded-2xl shadow-xl hover:scale-105 hover:-translate-y-1 active:scale-[0.96] transition-all duration-300 ease-out font-bold tracking-wide text-[1.05rem] text-white ${isBreak ? "bg-orange-500 hover:bg-orange-400 shadow-[0_10px_30px_rgba(249,115,22,0.3)] hover:shadow-[0_15px_40px_rgba(249,115,22,0.5)]" : "bg-red-600 hover:bg-red-500 shadow-[0_10px_30px_rgba(220,38,38,0.3)] hover:shadow-[0_15px_40px_rgba(220,38,38,0.5)]"}`}
                 >
@@ -551,11 +597,7 @@ function App() {
                 
                 {isBreak && (
                   <button 
-                    onClick={() => {
-                      setIsBreak(false); 
-                      setIsRunning(false); 
-                      setTimeLeft(trainingTime);
-                    }}
+                    onClick={skipBreak}
                     className="flex-none p-4.5 rounded-2xl bg-orange-100/50 dark:bg-orange-900/30 backdrop-blur-md text-orange-600 dark:text-orange-400 hover:bg-orange-200 dark:hover:bg-orange-800 hover:text-orange-700 dark:hover:text-orange-300 shadow-sm hover:shadow-[0_10px_20px_rgba(249,115,22,0.15)] hover:scale-110 hover:-translate-y-1 active:scale-90 transition-all duration-300 border border-orange-200/50 dark:border-orange-800/50"
                     title="Skip Ramen Break"
                   >
@@ -571,6 +613,18 @@ function App() {
                   className="flex-none p-4.5 rounded-2xl bg-white/50 dark:bg-slate-800/50 backdrop-blur-md text-slate-600 dark:text-zinc-300 hover:bg-white dark:hover:bg-slate-700 hover:text-red-500 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-900/50 shadow-sm hover:shadow-[0_10px_20px_rgba(0,0,0,0.05)] dark:hover:shadow-[0_10px_20px_rgba(0,0,0,0.3)] hover:scale-110 hover:-translate-y-1 hover:-rotate-12 active:scale-90 transition-all duration-300 border border-white/60 dark:border-slate-700/50"
                 >
                   <RotateCcw size={22} strokeWidth={2.5} />
+                </button>
+
+                <button 
+                  onClick={openPip} 
+                  title="Pop Out Miniplayer" 
+                  className={`flex-none p-4.5 rounded-2xl backdrop-blur-md transition-all duration-300 border hover:scale-110 hover:-translate-y-1 active:scale-90 ${
+                    isPipOpen 
+                      ? 'bg-red-600/20 dark:bg-red-600/20 text-red-500 border-red-500/40 shadow-[0_0_15px_rgba(220,38,38,0.25)]' 
+                      : 'bg-white/50 dark:bg-slate-800/50 text-slate-600 dark:text-zinc-300 hover:bg-white dark:hover:bg-slate-700 hover:text-red-500 dark:hover:text-red-400 border-white/60 dark:border-slate-700/50 shadow-sm hover:shadow-[0_10px_20px_rgba(0,0,0,0.05)] dark:hover:shadow-[0_10px_20px_rgba(0,0,0,0.3)]'
+                  }`}
+                >
+                  <PictureInPicture2 size={22} strokeWidth={2.5} />
                 </button>
               </div>
             </div>
@@ -698,8 +752,20 @@ function App() {
         Designed & Built by <a href="https://benzaiedsiraj.github.io/portfolio/" target="_blank" rel="noopener noreferrer" className="hover:underline transition-all">Siraj Benzaied</a> 2026
       </footer>
 
+      {/* INLINE DRAGGABLE MINIPLAYER FALLBACK (when PiP is not supported but user clicked Pop Out) */}
+      {isPipOpen && !isPipSupported && (
+        <Draggable nodeRef={draggableRef} bounds="parent" defaultPosition={{ x: 20, y: -140 }}>
+          <div ref={draggableRef} style={{ position: 'fixed', bottom: '80px', right: '20px', zIndex: 9999, cursor: 'grab' }}>
+            <MiniPlayer onClose={closePip} mode="inline" />
+          </div>
+        </Draggable>
+      )}
+
+      {/* PWA INSTALL PROMPT */}
+      <InstallPrompt />
+
     </div>
   );
-}
+};
 
 export default App;

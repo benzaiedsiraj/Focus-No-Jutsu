@@ -74,3 +74,29 @@
   50% { opacity: 0.4; }
   100% { transform: translateX(200%); opacity: 0.2; }
 }
+
+/* ----------------------------------- */
+/* FLOATING MINIPLAYER ANIMATIONS      */
+/* ----------------------------------- */
+
+@keyframes pip-slide-in {
+  0% { transform: translateY(8px) scale(0.96); opacity: 0; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+@keyframes miniplayer-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.miniplayer-spin {
+  animation: miniplayer-spin 8s linear infinite;
+}
+
+.miniplayer-btn:hover {
+  transform: scale(1.1);
+  background: rgba(255,255,255,0.15) !important;
+}
+.miniplayer-btn:active {
+  transform: scale(0.92);
+}
