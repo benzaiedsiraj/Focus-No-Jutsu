@@ -236,6 +236,62 @@ app.get('/api/leaderboard', async (req, res) => {
     res.status(500).json({ success: false, message: 'Server Error retrieving leaderboard' });
   }
 });
+// ----------------------------------------------------------------------------------
+// KAKASHI ADVISOR — AI-Powered Task Breakdown (Google Gemini)
+// ----------------------------------------------------------------------------------
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+
+const KAKASHI_SYSTEM_PROMPT = `You are Kakashi Hatake from Naruto. The user will give you a large, overwhelming task. Your job is to break it down into 3 or 4 small, actionable steps that can be completed in 25-minute Pomodoro intervals. Speak in Kakashi's laid-back, slightly lazy, but supportive tone. Keep the response brief, formatted in a clean numbered list, and maybe mention you are reading "Make-Out Tactics". Do not use markdown headers or bold text — just plain numbered steps with a brief intro line and a closing encouragement.`;
+
+// Stricter rate limit for AI route (10 requests per 15 min per user)
+const advisorLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { success: false, message: "Kakashi-sensei is napping. Too many questions — try again later." }
+});
+
+app.post('/api/advisor/ask', advisorLimiter, auth, async (req, res) => {
+  try {
+    const { task } = req.body;
+
+    if (!task || typeof task !== 'string' || task.trim().length < 3) {
+      return res.status(400).json({ success: false, message: 'Hmm, you need to tell me what the task is first.' });
+    }
+
+    if (task.length > 500) {
+      return res.status(400).json({ success: false, message: 'That mission brief is too long. Keep it under 500 characters.' });
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.status(503).json({ success: false, message: 'Kakashi-sensei is currently on a classified mission. (AI API key not configured)' });
+    }
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+
+    const result = await model.generateContent({
+      contents: [
+        {
+          role: 'user',
+          parts: [{ text: `${KAKASHI_SYSTEM_PROMPT}\n\nUser's overwhelming task: "${task.trim()}"` }]
+        }
+      ],
+      generationConfig: {
+        maxOutputTokens: 400,
+        temperature: 0.8,
+      },
+    });
+
+    const response = result.response;
+    const text = response.text();
+
+    res.status(200).json({ success: true, advice: text });
+  } catch (error) {
+    console.error('Kakashi Advisor Error:', error.message);
+    res.status(500).json({ success: false, message: 'Kakashi-sensei got caught in a genjutsu. Try again.' });
+  }
+});
 
 app.listen(PORT, () => {
   console.log(`\n⏱️  Focus-Flow Secured Backend running on port ${PORT}\n`);

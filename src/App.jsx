@@ -10,6 +10,7 @@ import { useDesktopView } from './hooks/useDesktopView';
 import MiniPlayer from './components/MiniPlayer';
 import InstallPrompt from './components/InstallPrompt';
 import { JutsuLibrary } from './components/JutsuLibrary';
+import KakashiAdvisor from './components/KakashiAdvisor';
 import Draggable from 'react-draggable';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -696,6 +697,10 @@ const AppDashboard = ({
             </section>
             
             <AmbientAudioWidget />
+
+            <div className={`transition-all duration-700 delay-[600ms] transform ${mounted ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}`}>
+              <KakashiAdvisor token={token} isDark={isDark} />
+            </div>
 
           </div>
 
