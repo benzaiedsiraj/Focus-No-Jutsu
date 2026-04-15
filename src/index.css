@@ -100,3 +100,362 @@
 .miniplayer-btn:active {
   transform: scale(0.92);
 }
+
+/* ============================================= */
+/* JUTSU LIBRARY — Unrolling Scroll System       */
+/* ============================================= */
+
+/* ── Container Grid ── */
+.jutsu-library__grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 20px;
+  border-radius: 1.5rem;
+  border: 1.5px dashed rgba(148, 163, 184, 0.3);
+  min-height: 140px;
+  align-content: flex-start;
+  position: relative;
+}
+
+.dark .jutsu-library__grid {
+  border-color: rgba(30, 41, 59, 0.8);
+  background: rgba(2, 6, 23, 0.15);
+}
+
+.jutsu-library__empty {
+  width: 100%;
+  padding: 24px 0;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 0.5;
+}
+
+.jutsu-library__empty span {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* ── Individual Scroll Item ── */
+.jutsu-scroll {
+  position: relative;
+  width: 56px;
+  height: 120px;
+  border-radius: 14px;
+  cursor: default;
+  overflow: hidden;
+  transition:
+    width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
+    height 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
+    border-color 0.4s,
+    box-shadow 0.4s,
+    transform 0.3s;
+  animation: slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0;
+  will-change: width, height;
+
+  /* Default glassmorphism base */
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Light mode base */
+:root:not(.dark) .jutsu-scroll {
+  background: rgba(255, 255, 255, 0.5);
+  border-color: rgba(203, 213, 225, 0.6);
+}
+
+/* ── HOVER: Unroll horizontally ── */
+.jutsu-scroll:hover {
+  width: min(380px, calc(100vw - 80px));
+  height: 72px;
+  z-index: 20;
+  transform: translateY(-4px);
+}
+
+/* ── Sealed State ── */
+.jutsu-scroll__sealed {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: opacity 0.25s ease;
+  padding: 8px 0;
+}
+
+.jutsu-scroll:hover .jutsu-scroll__sealed {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Decorative edge lines (top & bottom) */
+.jutsu-scroll__edge {
+  width: 24px;
+  height: 2px;
+  border-radius: 1px;
+  background: currentColor;
+  opacity: 0.15;
+  flex-shrink: 0;
+}
+
+/* Vertical date */
+.jutsu-scroll__date-vertical {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.jutsu-scroll__date-month {
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  opacity: 0.35;
+  text-transform: uppercase;
+}
+
+.jutsu-scroll__date-day {
+  font-size: 13px;
+  font-weight: 900;
+  opacity: 0.5;
+  line-height: 1.1;
+}
+
+/* Seal icon */
+.jutsu-scroll__seal {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.jutsu-scroll:hover .jutsu-scroll__seal {
+  transform: rotate(180deg) scale(0.6);
+}
+
+.jutsu-seal-icon {
+  transition: filter 0.4s;
+}
+
+/* Rank badge */
+.jutsu-scroll__rank-badge {
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  opacity: 0.25;
+  text-transform: uppercase;
+  transition: opacity 0.3s;
+}
+
+.jutsu-scroll:hover .jutsu-scroll__rank-badge {
+  opacity: 0;
+}
+
+/* ── Unrolled Content ── */
+.jutsu-scroll__content {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  opacity: 0;
+  transition: opacity 0.35s ease 0.15s;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.jutsu-scroll:hover .jutsu-scroll__content {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.jutsu-scroll__content-inner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  white-space: nowrap;
+  width: 100%;
+  min-width: 0;
+}
+
+.jutsu-scroll__content-seal {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+:root:not(.dark) .jutsu-scroll__content-seal {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.06);
+}
+
+.jutsu-scroll__details {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.jutsu-scroll__mission-name {
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 260px;
+}
+
+.dark .jutsu-scroll__mission-name {
+  color: #f1f5f9;
+}
+
+.jutsu-scroll__meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  opacity: 0.5;
+  white-space: nowrap;
+}
+
+.jutsu-scroll__meta-rank {
+  letter-spacing: 0.05em;
+}
+
+.jutsu-scroll__meta-sep {
+  opacity: 0.3;
+}
+
+/* ============================================= */
+/* TIER THEMES — D-Rank / B-Rank / S-Rank        */
+/* ============================================= */
+
+/* ── D-Rank: Clean glassmorphism, subtle ── */
+.jutsu-scroll--d-rank {
+  color: rgb(100, 116, 139); /* slate-500 */
+}
+
+.dark .jutsu-scroll--d-rank {
+  color: rgb(148, 163, 184); /* slate-400 */
+  border-color: rgba(51, 65, 85, 0.5);
+}
+
+.jutsu-scroll--d-rank:hover {
+  border-color: rgba(100, 116, 139, 0.4);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.dark .jutsu-scroll--d-rank:hover {
+  border-color: rgba(148, 163, 184, 0.25);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* ── B-Rank: Blue/purple glow ── */
+.jutsu-scroll--b-rank {
+  color: rgb(139, 92, 246); /* violet-500 */
+  border-color: rgba(139, 92, 246, 0.2);
+}
+
+.dark .jutsu-scroll--b-rank {
+  color: rgb(167, 139, 250); /* violet-400 */
+  border-color: rgba(139, 92, 246, 0.25);
+}
+
+.jutsu-scroll--b-rank:hover {
+  border-color: rgba(139, 92, 246, 0.5);
+  box-shadow:
+    0 0 20px rgba(139, 92, 246, 0.15),
+    0 0 40px rgba(99, 102, 241, 0.08),
+    0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.dark .jutsu-scroll--b-rank:hover {
+  border-color: rgba(139, 92, 246, 0.45);
+  box-shadow:
+    0 0 25px rgba(139, 92, 246, 0.2),
+    0 0 50px rgba(99, 102, 241, 0.1),
+    0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+/* ── S-Rank: Crimson/gold pulsing border ── */
+.jutsu-scroll--s-rank {
+  color: rgb(220, 38, 38); /* red-600 */
+  border-color: rgba(220, 38, 38, 0.3);
+  animation:
+    slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards,
+    s-rank-pulse 3s ease-in-out infinite;
+}
+
+.dark .jutsu-scroll--s-rank {
+  color: rgb(239, 68, 68); /* red-500 */
+  border-color: rgba(220, 38, 38, 0.35);
+}
+
+.jutsu-scroll--s-rank:hover {
+  border-color: rgba(220, 38, 38, 0.6);
+  box-shadow:
+    0 0 20px rgba(220, 38, 38, 0.2),
+    0 0 40px rgba(220, 38, 38, 0.1),
+    0 0 4px rgba(234, 179, 8, 0.15),
+    0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.dark .jutsu-scroll--s-rank:hover {
+  border-color: rgba(220, 38, 38, 0.6);
+  box-shadow:
+    0 0 30px rgba(220, 38, 38, 0.25),
+    0 0 60px rgba(220, 38, 38, 0.12),
+    0 0 8px rgba(234, 179, 8, 0.2),
+    0 8px 30px rgba(0, 0, 0, 0.5);
+}
+
+.jutsu-scroll--s-rank .jutsu-seal-icon {
+  filter: drop-shadow(0 0 6px rgba(220, 38, 38, 0.4));
+}
+
+/* S-Rank pulsing border keyframe */
+@keyframes s-rank-pulse {
+  0%, 100% {
+    border-color: rgba(220, 38, 38, 0.25);
+    box-shadow: 0 0 8px rgba(220, 38, 38, 0.08);
+  }
+  50% {
+    border-color: rgba(220, 38, 38, 0.5);
+    box-shadow:
+      0 0 15px rgba(220, 38, 38, 0.15),
+      0 0 4px rgba(234, 179, 8, 0.1);
+  }
+}
+
+/* ── Responsive: wider scrolls on mobile ── */
+@media (max-width: 640px) {
+  .jutsu-scroll {
+    width: 48px;
+    height: 100px;
+  }
+  .jutsu-scroll:hover {
+    width: calc(100vw - 80px);
+    height: 68px;
+  }
+}

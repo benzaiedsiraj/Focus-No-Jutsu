@@ -9,6 +9,7 @@ import { usePictureInPicture } from './hooks/usePictureInPicture';
 import { useDesktopView } from './hooks/useDesktopView';
 import MiniPlayer from './components/MiniPlayer';
 import InstallPrompt from './components/InstallPrompt';
+import { JutsuLibrary } from './components/JutsuLibrary';
 import Draggable from 'react-draggable';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -698,48 +699,7 @@ const AppDashboard = ({
 
           </div>
 
-          <section className={`lg:col-span-8 bg-white/60 dark:bg-slate-900/40 backdrop-blur-3xl border border-white/60 dark:border-slate-700/50 p-6 md:p-8 rounded-[2.5rem] shadow-lg dark:shadow-[0_10px_40px_rgb(0,0,0,0.3)] flex flex-col gap-6 transition-all duration-700 delay-[700ms] transform hover:-translate-y-1 hover:shadow-xl ${mounted ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}`}>
-            <div className="flex items-center justify-between group">
-              <div className="flex items-center gap-3">
-                <Scroll className="text-slate-800 dark:text-slate-200 group-hover:-rotate-12 group-hover:scale-110 transition-transform duration-500" size={24} />
-                <h2 className="text-xl font-bold tracking-tight text-slate-800 dark:text-slate-200 group-hover:tracking-wide transition-all duration-500">
-                  Jutsu Library
-                </h2>
-              </div>
-              <span className="text-sm font-bold tracking-wide text-white bg-slate-800 border border-slate-700/50 px-4 py-1.5 rounded-full shadow-[0_0_15px_rgba(0,0,0,0.1)] group-hover:shadow-[0_0_20px_rgba(0,0,0,0.3)] group-hover:bg-red-600 transition-all duration-500">
-                {sessions.length} Completed
-              </span>
-            </div>
-            
-            <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3 sm:gap-4 p-6 rounded-[2rem] border-[1.5px] border-dashed border-slate-300/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20 min-h-[160px] content-start">
-              
-              {sessions.map((session, index) => {
-                const rankTheme = getRankColors(session.missionRank || 'Unranked');
-                return (
-                  <div 
-                    key={session._id || index}
-                    style={{ animationDelay: `${index * 80}ms` }}
-                    className={`aspect-square rounded-[1.25rem] border flex flex-col items-center justify-center hover:-translate-y-2 hover:scale-[1.12] hover:rotate-3 hover:z-10 transition-all duration-300 cursor-default group relative overflow-hidden animate-slide-up opacity-0 shadow-sm ${rankTheme}`}
-                    title={`${session.missionRank || 'Unranked'} Mission: ${session.missionName || 'Uncategorized Training'}`}
-                  >
-                    <div className="absolute top-1.5 right-2 text-[0.6rem] font-black opacity-30 select-none pointer-events-none group-hover:opacity-100 group-hover:scale-110 transition-all duration-300">
-                      {session.missionRank?.split('-')[0] || ''}
-                    </div>
-                    <Scroll className="opacity-80 group-hover:opacity-100 group-hover:-rotate-12 group-hover:scale-110 transition-all duration-500" strokeWidth={2} size={30} />
-                  </div>
-                );
-              })}
-              
-              {sessions.length === 0 && (
-                <div className="col-span-full pt-4 pb-2 text-center flex flex-col justify-center items-center gap-2 opacity-50">
-                  <span className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest animate-pulse">
-                    No scrolls written. Break a seal!
-                  </span>
-                </div>
-              )}
-
-            </div>
-          </section>
+          <JutsuLibrary sessions={sessions} mounted={mounted} />
 
           <div className={`lg:col-span-4 w-full h-[540px] transition-all duration-700 delay-[850ms] transform ${mounted ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}`}>
              <Leaderboard data={leaderboardData} activeUser={activeUser} isDark={isDark} />
